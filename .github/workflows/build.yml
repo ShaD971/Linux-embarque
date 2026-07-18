@@ -26,6 +26,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     env:
+      BUILD_JOBS: 2
       FORCE_UNSAFE_CONFIGURE: 1
       SOURCE_DATE_EPOCH: 1543701000
     steps:
@@ -35,6 +36,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential bash bc binutils bzip2 cpio file gcc git gzip make patch perl python3 rsync sed tar unzip wget xz-utils
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
 
       - name: Cache downloads
         uses: actions/cache@v4
@@ -47,16 +50,75 @@ jobs:
       - name: Prepare Buildroot
         run: bash ./scripts/setup.sh
 
-      - name: Build image
-        run: bash ./scripts/build.sh
+      - name: Free disk space
+        run: |
+          echo "=== DISK BEFORE CLEANUP ==="
+          df -h || true
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          echo "=== DISK AFTER CLEANUP ==="
+          df -h || true
 
-      - name: Upload logs on failure
-        if: failure()
+      - name: Add swap when memory is limited
+        shell: bash
+        run: |
+          set -euo pipefail
+          memory_kb="$(awk '/MemTotal/ { print $2 }' /proc/meminfo)"
+          disk_kb="$(df --output=avail / | tail -n 1)"
+          if (( memory_kb < 10 * 1024 * 1024 && disk_kb > 8 * 1024 * 1024 )); then
+            sudo swapoff -a || true
+            sudo fallocate -l 6G /swapfile
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon /swapfile
+          else
+            echo "Swap creation skipped: sufficient memory or insufficient free disk."
+          fi
+          free -h
+
+      - name: Configure and diagnose Buildroot
+        shell: bash
+        run: |
+          set -euo pipefail
+          make -C buildroot \
+            BR2_EXTERNAL="$GITHUB_WORKSPACE/external" \
+            O="$GITHUB_WORKSPACE/output" \
+            linux_embarque_defconfig
+
+          echo "=== CPU ==="
+          nproc
+          lscpu || true
+
+          echo "=== MEMORY ==="
+          free -h || true
+
+          echo "=== DISK ==="
+          df -h || true
+
+          echo "=== BUILDROOT CONFIG ==="
+          grep -E 'BR2_(ARCH|ARM|TOOLCHAIN|LIBC|GLIBC|JLEVEL)' output/.config || true
+
+      - name: Build image
+        shell: bash
+        run: |
+          set -o pipefail
+          bash ./scripts/build.sh
+
+      - name: Upload build diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
-          path: logs/
+          path: |
+            build.log
+            logs/
+            output/.config
+            output/build/*/.stamp_*
+            output/build/*/config.log
+            output/build/*/*.log
+            output/host/**/config.log
           if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 14
 
       - name: Upload successful images
         if: success()

@@ -24,6 +24,8 @@ try {
   $required = @(
     'buildroot.version', 'external\external.desc', 'external\Config.in', 'external\external.mk',
     'external\configs\linux_embarque_defconfig', 'external\board\linux-embarque\linux.config',
+    'external\board\linux-embarque\cmdline.txt', 'external\board\linux-embarque\config_4_64bit.txt',
+    'external\board\linux-embarque\genimage.cfg',
     'scripts\setup.sh', 'scripts\build.sh', 'scripts\rebuild.sh', 'scripts\clean.sh',
     'scripts\setup.ps1', 'scripts\build.ps1', '.github\workflows\build.yml'
   )
@@ -32,12 +34,29 @@ try {
   $desc = Get-Content 'external\external.desc' -Raw
   Add-Check 'BR2_EXTERNAL name' ($desc -match '(?m)^name: LINUX_EMBARQUE$') 'stable external name'
   $defconfig = Get-Content 'external\configs\linux_embarque_defconfig' -Raw
-  Add-Check 'Target architecture' ($defconfig -match '(?m)^BR2_arm=y$' -and $defconfig -match '(?m)^BR2_cortex_a53=y$') 'ARM Cortex-A53 32-bit'
-  Add-Check 'Linux 6.6 default' ($defconfig -match 'BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE="6\.6\.') '6.6 LTS selected'
+  Add-Check 'Target architecture' ($defconfig -match '(?m)^BR2_aarch64=y$' -and $defconfig -match '(?m)^BR2_cortex_a72=y$') 'Raspberry Pi 4 Cortex-A72 64-bit'
+  Add-Check 'Raspberry Pi kernel pin' ($defconfig -match '576cc10e1ed50a9eacffc7a05c796051d7343ea4') 'Buildroot 2025.02.16 Raspberry Pi kernel'
+  Add-Check 'Raspberry Pi 4 DTB' ($defconfig -match 'broadcom/bcm2711-rpi-4-b') 'BCM2711 Model B'
+  Add-Check 'Raspberry Pi 4 firmware' ($defconfig -match '(?m)^BR2_PACKAGE_RPI_FIRMWARE_VARIANT_PI4=y$') 'start4/fixup4 firmware'
+  Add-Check 'Raspberry Pi Wi-Fi firmware' ($defconfig -match '(?m)^BR2_PACKAGE_BRCMFMAC_SDIO_FIRMWARE_RPI_WIFI=y$') 'BCM43455 firmware'
   Add-Check 'No empty root password' ($defconfig -match '(?m)^# BR2_TARGET_ENABLE_ROOT_LOGIN is not set$') 'root login disabled by default'
+  $cmdline = Get-Content 'external\board\linux-embarque\cmdline.txt' -Raw
+  Add-Check 'Raspberry Pi kernel command line' ($cmdline -match 'root=/dev/mmcblk0p2' -and $cmdline -match 'rootwait') 'root filesystem and rootwait configured'
+  $firmwareConfig = Get-Content 'external\board\linux-embarque\config_4_64bit.txt' -Raw
+  Add-Check '64-bit firmware boot' ($firmwareConfig -match '(?m)^arm_64bit=1$' -and $firmwareConfig -match '(?m)^kernel=Image$') 'AArch64 Image selected'
+  $genimageConfig = Get-Content 'external\board\linux-embarque\genimage.cfg' -Raw
+  Add-Check 'Pi 4 SD image contents' ($genimageConfig -match 'bcm2711-rpi-4-b\.dtb' -and $genimageConfig -match 'start4\.elf' -and $genimageConfig -notmatch 'bootcode\.bin') 'Pi 4 EEPROM boot layout'
+  $workflow = Get-Content '.github\workflows\build.yml' -Raw
+  Add-Check 'CI parallelism bounded' ($workflow -match '(?m)^\s+BUILD_JOBS:\s+2\s*$') 'BUILD_JOBS=2'
+  Add-Check 'CI diagnostics always uploaded' ($workflow -match '(?ms)- name: Upload build diagnostics.*?if: always\(\)') 'logs and stamps retained on failure'
 
-  $bashFiles = Get-ChildItem 'scripts','external' -Recurse -File -Filter '*.sh'
-  foreach ($file in $bashFiles) {
+  $lfFiles = @(
+    Get-ChildItem 'scripts','external' -Recurse -File -Filter '*.sh'
+    Get-Item 'external\board\linux-embarque\cmdline.txt'
+    Get-Item 'external\board\linux-embarque\config_4_64bit.txt'
+    Get-Item 'external\board\linux-embarque\genimage.cfg'
+  )
+  foreach ($file in $lfFiles) {
     $bytes = [System.IO.File]::ReadAllBytes($file.FullName)
     $hasCrLf = $false
     for ($i = 0; $i -lt $bytes.Length - 1; $i++) { if ($bytes[$i] -eq 13 -and $bytes[$i + 1] -eq 10) { $hasCrLf = $true; break } }

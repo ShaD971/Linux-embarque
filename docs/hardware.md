@@ -1,34 +1,50 @@
 # Matériel, Device Tree et démarrage
 
-## Cible détectée
+## Cible
 
-Les rapports historiques nomment une Raspberry Pi 3 et montrent une image SD. Le modèle exact B/B+, la RAM et les périphériques ne sont pas précisés. La configuration moderne cible donc ARM 32 bits Cortex-A53 et produit les DTB mainline :
+La cible actuelle est une **Raspberry Pi 4 Model B avec 8 Go de RAM** :
 
-- `broadcom/bcm2837-rpi-3-b.dtb` ;
-- `broadcom/bcm2837-rpi-3-b-plus.dtb`.
+- SoC Broadcom BCM2711, quatre Cortex-A72 ;
+- noyau et espace utilisateur AArch64 pour adresser toute la mémoire ;
+- Device Tree `broadcom/bcm2711-rpi-4-b.dtb` ;
+- démarrage depuis une carte microSD.
 
-## Device Trees historiques
+Les Raspberry Pi 400 et Compute Module 4 partagent le BCM2711 mais ne sont pas inclus dans l'image : leurs DTB et leurs contraintes de stockage diffèrent.
 
-Le dépôt ne contient aucun `.dts` personnalisé pour le projet. Les defconfigs historiques demandent des DTB intégrés au noyau Raspberry Pi : `bcm2710-rpi-3-b`, `bcm2710-rpi-3-b-plus` et `bcm2710-rpi-cm3`. Les noms mainline BCM2837 remplacent B/B+; Compute Module 3 n'est pas inclus faute d'indice indiquant cette carte.
+## Chaîne de démarrage
 
-Aucun overlay étudiant n'a été identifié. Le script historique pouvait ajouter `pi3-miniuart-bt`; le nouveau script active l'UART et conserve les overlays du firmware. Le choix exact de console et la coexistence Bluetooth/UART sont **à confirmer sur le matériel**.
+Le Pi 4 charge son premier étage depuis l'EEPROM SPI de la carte. La partition FAT de `sdcard.img` contient :
 
-## Noyau et pilotes
+- `start4.elf` et `fixup4.dat` ;
+- `config.txt` avec `arm_64bit=1` et `kernel=Image` ;
+- le noyau AArch64 `Image` ;
+- `bcm2711-rpi-4-b.dtb` et les overlays du firmware ;
+- `cmdline.txt`, qui monte `/dev/mmcblk0p2` après détection de la carte.
 
-Le fragment active stockage MMC/SD, ext4/vfat, Ethernet USB LAN78xx, USB hôte/stockage, GPIO, I2C, SPI, watchdog BCM2835, DRM VC4/framebuffer, consoles série et `brcmfmac` en module. Cette liste couvre un Pi 3 générique, pas un inventaire de périphériques prouvé.
+`bootcode.bin`, `start.elf`, `fixup.dat` et `zImage` appartiennent à l'ancienne chaîne Pi 3 et ne doivent pas être réintroduits. Aucun U-Boot n'est nécessaire.
 
-À confirmer : firmware Wi-Fi, Bluetooth, écran/caméra, audio, capteurs GPIO, adresses I2C/SPI et watchdog applicatif. Les pilotes ne doivent pas être supprimés pour gagner de l'espace avant cette validation.
+## Noyau et périphériques
 
-## Bootloader
+La configuration part du `bcm2711_defconfig` du noyau Raspberry Pi utilisé par le profil officiel Buildroot `raspberrypi4_64_defconfig`. Le fragment du projet conserve :
 
-Le profil historique n'active pas U-Boot. Le démarrage utilise le firmware Raspberry Pi (`bootcode.bin`, `start.elf`, `fixup.dat`, `config.txt`) copié dans la partition FAT. Aucun fork U-Boot ni patch U-Boot spécifique n'est donc à migrer.
+- stockage USB ;
+- Wi-Fi `brcmfmac` et firmware BCM43455 ;
+- I2C et SPI ;
+- watchdog BCM2835 ;
+- horodatage des messages noyau.
 
-Une migration future vers U-Boot mainline est possible mais constitue un changement de chaîne de boot hors du périmètre prudent actuel. Elle nécessiterait un defconfig U-Boot Pi 3, une nouvelle disposition d'image, des tests série et une procédure de retour arrière.
+L'Ethernet Gigabit BCM54213PE/GENET, le contrôleur PCIe/XHCI USB 3, le stockage SD et l'affichage VC4 viennent du defconfig BCM2711. `wpa_supplicant` et `iw` sont présents, mais aucun SSID ni secret Wi-Fi n'est versionné.
+
+## Particularités du modèle 8 Go
+
+Le choix AArch64 est indispensable pour exploiter simplement les 8 Go. Après démarrage, `/proc/meminfo` doit généralement montrer environ 7,5 à 7,9 Gio, une partie de la mémoire étant réservée au firmware et au matériel. `gpu_mem=64` limite la réservation GPU héritée ; le pilote KMS peut gérer ses propres allocations.
+
+Une alimentation USB-C stable de 5 V/3 A et une carte microSD fiable sont recommandées. Un firmware EEPROM ancien peut empêcher ou perturber le boot ; il doit alors être mis à jour avec les outils officiels Raspberry Pi avant de tester l'image Buildroot.
 
 ## Validation matérielle requise
 
-1. Identifier le modèle exact avec la sérigraphie et `/proc/cpuinfo` sur une image connue.
-2. Sauvegarder la carte SD avant flash.
-3. Capturer la console série 115200 8N1 et la sortie HDMI.
-4. Vérifier MMC, Ethernet, USB, watchdog puis Wi-Fi.
-5. Tester le DTB B et B+ correspondant uniquement au modèle réel.
+1. Sauvegarder la carte microSD puis flasher `output/images/sdcard.img`.
+2. Vérifier la sortie HDMI ou la console série 3,3 V à 115200 8N1.
+3. Confirmer `Raspberry Pi 4 Model B`, `getconf LONG_BIT` égal à `64` et la mémoire visible.
+4. Vérifier microSD, Ethernet DHCP, USB 2/3 et watchdog.
+5. Configurer localement `wpa_supplicant`, puis vérifier le Wi-Fi sans publier les identifiants.

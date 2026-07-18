@@ -22,7 +22,14 @@ make -C buildroot BR2_EXTERNAL="$PWD/external" O="$PWD/output" linux_embarque_de
 make -C buildroot O="$PWD/output" BR2_DL_DIR="$PWD/dl"
 ```
 
-Les journaux des scripts sont placés dans `logs/`; les images sont attendues dans `output/images/`.
+Les journaux des scripts sont placés dans `logs/`; les images sont attendues dans `output/images/`. Pour la Raspberry Pi 4 8 Go, la construction doit notamment produire :
+
+- `Image` ;
+- `bcm2711-rpi-4-b.dtb` ;
+- `rpi-firmware/start4.elf` et `rpi-firmware/fixup4.dat` ;
+- `rootfs.ext4`, `boot.vfat` et `sdcard.img`.
+
+Le script post-image arrête maintenant la construction si l'un des artefacts de boot Pi 4 manque.
 
 ## Sous-module optionnel
 

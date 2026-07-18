@@ -31,7 +31,7 @@ Architecture démontrée : ARM 32 bits. Pour le profil Pi 3 : Cortex-A53 avec NE
 
 ## 5. Carte cible présumée
 
-Les trois PDF citent explicitement une **Raspberry Pi 3** et une carte SD. La révision exacte (Model B ou B+), la quantité de RAM et les périphériques raccordés ne sont pas documentés. Le profil moderne couvre donc B et B+ et marque les périphériques optionnels « à confirmer ».
+Les trois PDF citent explicitement une **Raspberry Pi 3** et une carte SD. La révision exacte (Model B ou B+), la quantité de RAM et les périphériques raccordés ne sont pas documentés. L'audit initial recommandait donc un profil B/B+; cette recommandation historique a ensuite été remplacée par la cible explicitement demandée Raspberry Pi 4 Model B 8 Go.
 
 ## 6. Packages activés
 
@@ -88,8 +88,8 @@ Les nombreux patchs sous `board/` et `package/` appartiennent à la distribution
 
 1. Conserver l'historique et développer sur `modernization/buildroot-2025.02`.
 2. Utiliser Buildroot 2025.02.x LTS hors de Git et un `BR2_EXTERNAL` versionné.
-3. Cibler Raspberry Pi 3 ARM 32 bits, Linux 6.6 LTS mainline, avec DTB B/B+.
-4. Garder Linux 6.12 comme option documentée tant qu'un essai matériel ne l'a pas validé.
+3. Recommandation initiale désormais remplacée : cibler Raspberry Pi 3 ARM 32 bits, Linux 6.6 LTS mainline, avec DTB B/B+.
+4. Pour la cible actuelle, partir de la configuration Buildroot Raspberry Pi 4 64 bits et la valider sur la carte 8 Go.
 5. Remplacer le paquet exemple par une source locale minimale, licenciée et reproductible.
 6. Désactiver la connexion root par défaut et ne pas activer SSH avant définition d'une politique d'identifiants.
 7. Valider d'abord le defconfig sous Linux/WSL2, puis compiler et tester `sdcard.img` sur une carte sauvegardée.

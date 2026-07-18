@@ -11,7 +11,7 @@ Buildroot 2025.02.x (buildroot/, non versionné)
         -> output/ et logs/ (non versionnés)
 ```
 
-`external/external.desc` fournit le nom stable `LINUX_EMBARQUE`. `Config.in` expose les packages personnalisés et `external.mk` charge leurs fichiers `.mk`. Le defconfig contient uniquement les choix propres au produit ; le fragment `linux.config` complète le `multi_v7_defconfig` du noyau mainline.
+`external/external.desc` fournit le nom stable `LINUX_EMBARQUE`. `Config.in` expose les packages personnalisés et `external.mk` charge leurs fichiers `.mk`. Le defconfig contient uniquement les choix propres au produit ; le fragment `linux.config` complète le `bcm2711_defconfig` 64 bits du noyau Raspberry Pi.
 
 L'arbre Buildroot historique à la racine est une source documentaire. La variable `BUILDROOT_DIR` permet de pointer les scripts vers une autre copie sans toucher à cet historique.
 
