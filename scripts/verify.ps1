@@ -1,0 +1,67 @@
+[CmdletBinding()]
+param()
+$ErrorActionPreference = 'Stop'
+$Root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$ReportDir = Join-Path $Root 'build'
+$Report = Join-Path $ReportDir 'modernization_verification_report.txt'
+New-Item -ItemType Directory -Force -Path $ReportDir | Out-Null
+$Results = [System.Collections.Generic.List[string]]::new()
+$Failures = 0
+
+function Add-Check([string]$Name, [bool]$Passed, [string]$Detail) {
+  $script:Failures += [int](-not $Passed)
+  $status = if ($Passed) { 'PASS' } else { 'FAIL' }
+  $Results.Add("[$status] $Name - $Detail")
+}
+
+Push-Location $Root
+try {
+  $git = Get-Command git -ErrorAction SilentlyContinue
+  Add-Check 'Git available' ([bool]$git) $(if ($git) { $git.Source } else { 'not found' })
+  $wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
+  Add-Check 'WSL available' ([bool]$wsl) $(if ($wsl) { 'WSL command found' } else { 'optional for checks; required for Windows builds' })
+
+  $required = @(
+    'buildroot.version', 'external\external.desc', 'external\Config.in', 'external\external.mk',
+    'external\configs\linux_embarque_defconfig', 'external\board\linux-embarque\linux.config',
+    'scripts\setup.sh', 'scripts\build.sh', 'scripts\rebuild.sh', 'scripts\clean.sh',
+    'scripts\setup.ps1', 'scripts\build.ps1', '.github\workflows\build.yml'
+  )
+  foreach ($path in $required) { Add-Check "Required file $path" (Test-Path $path) $path }
+
+  $desc = Get-Content 'external\external.desc' -Raw
+  Add-Check 'BR2_EXTERNAL name' ($desc -match '(?m)^name: LINUX_EMBARQUE$') 'stable external name'
+  $defconfig = Get-Content 'external\configs\linux_embarque_defconfig' -Raw
+  Add-Check 'Target architecture' ($defconfig -match '(?m)^BR2_arm=y$' -and $defconfig -match '(?m)^BR2_cortex_a53=y$') 'ARM Cortex-A53 32-bit'
+  Add-Check 'Linux 6.6 default' ($defconfig -match 'BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE="6\.6\.') '6.6 LTS selected'
+  Add-Check 'No empty root password' ($defconfig -match '(?m)^# BR2_TARGET_ENABLE_ROOT_LOGIN is not set$') 'root login disabled by default'
+
+  $bashFiles = Get-ChildItem 'scripts','external' -Recurse -File -Filter '*.sh'
+  foreach ($file in $bashFiles) {
+    $bytes = [System.IO.File]::ReadAllBytes($file.FullName)
+    $hasCrLf = $false
+    for ($i = 0; $i -lt $bytes.Length - 1; $i++) { if ($bytes[$i] -eq 13 -and $bytes[$i + 1] -eq 10) { $hasCrLf = $true; break } }
+    Add-Check "LF endings $($file.Name)" (-not $hasCrLf) $file.FullName
+  }
+
+  $secretPattern = '(?i)(BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{20,}|password\s*[:=]\s*[^\s#]+)'
+  $scanFiles = Get-ChildItem 'external','scripts','.github' -Recurse -File | Where-Object { $_.Length -lt 1MB }
+  $secretHits = $scanFiles | Select-String -Pattern $secretPattern -ErrorAction SilentlyContinue
+  Add-Check 'Obvious secret scan' (-not [bool]$secretHits) $(if ($secretHits) { ($secretHits.Path -join ', ') } else { 'no obvious secrets found' })
+
+  $trackedGenerated = if ($git) { & git -c "safe.directory=$($Root -replace '\\','/')" ls-files output dl logs build 2>$null } else { @() }
+  Add-Check 'Generated files not tracked' (-not [bool]$trackedGenerated) $(if ($trackedGenerated) { $trackedGenerated -join ', ' } else { 'none' })
+} finally {
+  Pop-Location
+}
+
+$header = @(
+  'Linux-embarque modernization verification',
+  "Generated: $([DateTime]::UtcNow.ToString('u'))",
+  "Repository: $Root",
+  ''
+)
+Set-Content -LiteralPath $Report -Value ($header + $Results + '', "Failures: $Failures") -Encoding utf8
+$Results | ForEach-Object { Write-Host $_ }
+Write-Host "Report: $Report"
+if ($Failures -gt 0) { exit 1 }

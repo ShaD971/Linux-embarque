@@ -1,0 +1,67 @@
+name: Buildroot image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, 'modernization/**']
+    paths:
+      - 'external/**'
+      - 'scripts/**'
+      - 'Makefile'
+      - 'buildroot.version'
+      - '.github/workflows/build.yml'
+  pull_request:
+    paths:
+      - 'external/**'
+      - 'scripts/**'
+      - 'Makefile'
+      - 'buildroot.version'
+      - '.github/workflows/build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      FORCE_UNSAFE_CONFIGURE: 1
+      SOURCE_DATE_EPOCH: 1543701000
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Buildroot dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential bash bc binutils bzip2 cpio file gcc git gzip make patch perl python3 rsync sed tar unzip wget xz-utils
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: dl
+          key: buildroot-dl-${{ hashFiles('buildroot.version', 'external/configs/linux_embarque_defconfig', 'external/package/**/*.mk') }}
+          restore-keys: |
+            buildroot-dl-
+
+      - name: Prepare Buildroot
+        run: bash ./scripts/setup.sh
+
+      - name: Build image
+        run: bash ./scripts/build.sh
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: logs/
+          if-no-files-found: warn
+
+      - name: Upload successful images
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-embarque-images
+          path: output/images/
+          if-no-files-found: error

@@ -1,0 +1,5 @@
+config BR2_PACKAGE_HELLOWORLD
+	bool "helloworld"
+	help
+	  Small local program preserved from the historical student project.
+	  It prints a deterministic greeting and has no network dependency.

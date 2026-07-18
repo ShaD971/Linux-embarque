@@ -1,0 +1,40 @@
+# Modern Buildroot workspace
+/buildroot/
+/output/
+/dl/
+/logs/
+/build/
+!/build/.gitkeep
+
+# Downloaded archives and generated images
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.zip
+*.img
+*.iso
+*.ext2
+*.ext4
+*.squashfs
+*.vfat
+
+# Generated configuration (tracked intentional configs are below external/)
+/.config
+**/.config.old
+**/defconfig.tmp
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary reports
+*.tmp
+*.log
+modernization_verification_report.txt
