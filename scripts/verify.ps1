@@ -26,10 +26,15 @@ try {
     'external\configs\linux_embarque_defconfig', 'external\board\linux-embarque\linux.config',
     'external\board\linux-embarque\cmdline.txt', 'external\board\linux-embarque\config_4_64bit.txt',
     'external\board\linux-embarque\genimage.cfg',
+    'external\board\linux-embarque\post-build.sh', 'external\board\linux-embarque\post-image.sh',
     'scripts\setup.sh', 'scripts\build.sh', 'scripts\rebuild.sh', 'scripts\clean.sh',
     'scripts\setup.ps1', 'scripts\build.ps1', '.github\workflows\build.yml'
   )
   foreach ($path in $required) { Add-Check "Required file $path" (Test-Path $path) $path }
+  foreach ($hook in @('external/board/linux-embarque/post-build.sh', 'external/board/linux-embarque/post-image.sh')) {
+    $indexEntry = if ($git) { & git -c "safe.directory=$($Root -replace '\\','/')" ls-files -s -- $hook 2>$null } else { '' }
+    Add-Check "Executable Git mode $hook" ($indexEntry -match '^100755 ') $(if ($indexEntry) { $indexEntry } else { 'not tracked' })
+  }
 
   $desc = Get-Content 'external\external.desc' -Raw
   Add-Check 'BR2_EXTERNAL name' ($desc -match '(?m)^name: LINUX_EMBARQUE$') 'stable external name'
