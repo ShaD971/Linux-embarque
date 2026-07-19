@@ -1,0 +1,11 @@
+*.sh text eol=lf
+Makefile text eol=lf
+*.mk text eol=lf
+*.config text eol=lf
+*_defconfig text eol=lf
+*.cfg text eol=lf
+*.txt text eol=lf
+*.ps1 text eol=crlf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
