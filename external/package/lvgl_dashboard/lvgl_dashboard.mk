@@ -2,9 +2,10 @@
 # lvgl_dashboard
 ################################################################################
 
-LVGL_DASHBOARD_VERSION = 1.0
-LVGL_DASHBOARD_SITE = $(call qstrip,$(BR2_PACKAGE_LVGL_DASHBOARD_SRC_PATH))
-LVGL_DASHBOARD_SITE_METHOD = local
+LVGL_DASHBOARD_VERSION = 6141926be161ead29d34e1090dc2cfca535ae283
+LVGL_DASHBOARD_SITE = https://github.com/ShaD971/lvgl_dashboard.git
+LVGL_DASHBOARD_SITE_METHOD = git
+LVGL_DASHBOARD_GIT_SUBMODULES = YES
 LVGL_DASHBOARD_DEPENDENCIES = libdrm
 
 define LVGL_DASHBOARD_BUILD_CMDS

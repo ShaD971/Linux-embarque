@@ -7,21 +7,6 @@ config BR2_PACKAGE_LVGL_DASHBOARD
 	  pour la Raspberry Pi 4. Affichage seul (CPU, RAM, temperature,
 	  reseau, horloge), sans dependance a un ecran tactile.
 
-	  Le code source vit dans le depot separe lvgl_dashboard (LVGL
-	  lui-meme y est inclus en sous-module) ; voir l'option de
-	  chemin ci-dessous.
-
-if BR2_PACKAGE_LVGL_DASHBOARD
-
-config BR2_PACKAGE_LVGL_DASHBOARD_SRC_PATH
-	string "Chemin du depot lvgl_dashboard"
-	default "$(BR2_EXTERNAL_LINUX_EMBARQUE_PATH)/../lvgl_dashboard"
-	help
-	  Chemin local (absolu, ou relatif a l'arbre Buildroot) vers le
-	  depot lvgl_dashboard. Par defaut, on suppose un clone frere de
-	  ce depot Linux-embarque (../lvgl_dashboard). Le sous-module
-	  lvgl doit y etre initialise au prealable :
-
-	    git submodule update --init --recursive
-
-endif
+	  Le code source est telecharge depuis le depot separe
+	  lvgl_dashboard a une revision figee. Son sous-module LVGL est
+	  inclus automatiquement dans l'archive source Buildroot.

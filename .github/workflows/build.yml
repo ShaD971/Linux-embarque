@@ -43,7 +43,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: dl
-          key: buildroot-dl-${{ hashFiles('buildroot.version', 'external/configs/linux_embarque_defconfig', 'external/package/**/*.mk') }}
+          key: buildroot-dl-${{ hashFiles('buildroot.version', 'external/configs/linux_embarque_defconfig', 'external/package/**/*.mk', 'external/package/**/*.hash') }}
           restore-keys: |
             buildroot-dl-
 
@@ -110,7 +110,10 @@ jobs:
           name: build-logs
           path: |
             build.log
+            build-diagnostics/
             logs/
+            buildroot.version
+            external/configs/linux_embarque_defconfig
             output/.config
             output/build/*/.stamp_*
             output/build/*/config.log
