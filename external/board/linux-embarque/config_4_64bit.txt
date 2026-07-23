@@ -6,3 +6,4 @@ disable_overscan=1
 gpu_mem=64
 enable_uart=1
 dtoverlay=miniuart-bt
+dtoverlay=vc4-kms-v3d
