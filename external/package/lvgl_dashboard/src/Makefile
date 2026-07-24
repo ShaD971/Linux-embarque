@@ -4,10 +4,14 @@ BIN = dashboard
 
 LVGL_PATH = lvgl
 
-CFLAGS += -O2 -g -Wall -Wextra -I. -I$(LVGL_PATH) -I$(LVGL_PATH)/include
-CFLAGS += $(shell $(PKG_CONFIG) --cflags libdrm)
-LDFLAGS += -lm -lpthread
-LDFLAGS += $(shell $(PKG_CONFIG) --libs libdrm)
+# override: Buildroot's TARGET_CONFIGURE_OPTS passes CFLAGS/LDFLAGS on the
+# make command line, which a plain += would silently be discarded in favor
+# of (command-line variables win over makefile assignments unless the
+# makefile explicitly opts back in with `override`).
+override CFLAGS += -O2 -g -Wall -Wextra -I. -I$(LVGL_PATH) -I$(LVGL_PATH)/include
+override CFLAGS += $(shell $(PKG_CONFIG) --cflags libdrm)
+override LDFLAGS += -lm -lpthread
+override LDFLAGS += $(shell $(PKG_CONFIG) --libs libdrm)
 
 include lvgl_sources.mk
 
