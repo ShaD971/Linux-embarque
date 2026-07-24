@@ -31,6 +31,46 @@ jobs:
       SOURCE_DATE_EPOCH: 1543701000
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate Buildroot inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          external_dir="$GITHUB_WORKSPACE/external"
+          defconfig="$external_dir/configs/linux_embarque_defconfig"
+          package_dir="$external_dir/package/lvgl_dashboard"
+
+          echo "Buildroot requested version: $(<buildroot.version)"
+          echo "BR2_EXTERNAL=$external_dir"
+          echo "=== GIT SUBMODULES ==="
+          git submodule status --recursive
+          echo "=== CI DEFCONFIG ==="
+          cat "$defconfig"
+
+          required_files=(
+            "$external_dir/external.desc"
+            "$external_dir/external.mk"
+            "$external_dir/Config.in"
+            "$external_dir/package/Config.in"
+            "$package_dir/Config.in"
+            "$package_dir/lvgl_dashboard.mk"
+            "$package_dir/lvgl_dashboard.hash"
+            "$package_dir/src/Makefile"
+            "$package_dir/src/main.c"
+            "$package_dir/src/lvgl_sources.mk"
+          )
+          for required_file in "${required_files[@]}"; do
+            if [[ ! -f "$required_file" ]]; then
+              echo "::error file=${required_file#$GITHUB_WORKSPACE/}::Required Buildroot input is missing"
+              exit 1
+            fi
+          done
+
+          grep -q '^BR2_PACKAGE_LVGL_DASHBOARD=y$' "$defconfig"
+          grep -q '^LVGL_DASHBOARD_SITE_METHOD = local$' "$package_dir/lvgl_dashboard.mk"
+          grep -q '^LVGL_DASHBOARD_EXTRA_DOWNLOADS = ' "$package_dir/lvgl_dashboard.mk"
 
       - name: Install Buildroot dependencies
         run: |
@@ -43,9 +83,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: dl
-          key: buildroot-dl-${{ hashFiles('buildroot.version', 'external/configs/linux_embarque_defconfig', 'external/package/**/*.mk', 'external/package/**/*.hash') }}
-          restore-keys: |
-            buildroot-dl-
+          key: buildroot-dl-${{ hashFiles('buildroot.version', 'external/external.desc', 'external/external.mk', 'external/Config.in', 'external/configs/**', 'external/package/**/Config.in', 'external/package/**/*.mk', 'external/package/**/*.hash') }}
 
       - name: Prepare Buildroot
         run: bash ./scripts/setup.sh
@@ -96,6 +134,10 @@ jobs:
 
           echo "=== BUILDROOT CONFIG ==="
           grep -E 'BR2_(ARCH|ARM|TOOLCHAIN|LIBC|GLIBC|JLEVEL)' output/.config || true
+
+          echo "=== BUILDROOT VERSION ==="
+          sed -n 's/^export BR2_VERSION := /Buildroot /p' buildroot/Makefile
+          echo "BR2_EXTERNAL=$GITHUB_WORKSPACE/external"
 
       - name: Build image
         shell: bash

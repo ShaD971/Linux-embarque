@@ -1,2 +1,2 @@
-# Locally calculated after Buildroot's reproducible git archive generation.
-sha256  be55cb8bf6d93536facd784519dbddae04e5e67826fe6267dc8965adafcddb06  lvgl_dashboard-6141926be161ead29d34e1090dc2cfca535ae283.tar.gz
+# Locally calculated from the public GitHub archive.
+sha256  fbb8e9a44796348a9fbf4efca6543bbca9625c74ea1a0aca85984a0910a97bb3  lvgl-c4424b27d63db752aa75f9fdffe30c6467b55ad1.tar.gz

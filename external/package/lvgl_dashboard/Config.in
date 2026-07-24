@@ -7,6 +7,6 @@ config BR2_PACKAGE_LVGL_DASHBOARD
 	  pour la Raspberry Pi 4. Affichage seul (CPU, RAM, temperature,
 	  reseau, horloge), sans dependance a un ecran tactile.
 
-	  Le code source est telecharge depuis le depot separe
-	  lvgl_dashboard a une revision figee. Son sous-module LVGL est
-	  inclus automatiquement dans l'archive source Buildroot.
+	  Le code applicatif est versionne avec ce package. Les sources
+	  LVGL sont telechargees separement depuis leur depot public a
+	  une revision figee et verifiee par hash.
