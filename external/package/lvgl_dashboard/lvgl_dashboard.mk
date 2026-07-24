@@ -2,23 +2,23 @@
 # lvgl_dashboard
 ################################################################################
 
-LVGL_DASHBOARD_VERSION = 1.0
-LVGL_DASHBOARD_SITE = $(LVGL_DASHBOARD_PKGDIR)/src
-LVGL_DASHBOARD_SITE_METHOD = local
+# LVGL_DASHBOARD_SITE_METHOD is intentionally left as the default (wget):
+# `local` would set OVERRIDE_SRCDIR, which makes Buildroot skip the whole
+# download stage (pkg-generic.mk) - EXTRA_DOWNLOADS would then never be
+# fetched. LVGL itself (public repo) is therefore the package's normal,
+# hash-checked download; the dashboard application code, which is
+# versioned directly in this tree, is copied in during extraction instead.
+LVGL_DASHBOARD_VERSION = c4424b27d63db752aa75f9fdffe30c6467b55ad1
+LVGL_DASHBOARD_SITE = $(call github,lvgl,lvgl,$(LVGL_DASHBOARD_VERSION))
+LVGL_DASHBOARD_SOURCE = lvgl-$(LVGL_DASHBOARD_VERSION).tar.gz
 LVGL_DASHBOARD_DEPENDENCIES = libdrm
 
-LVGL_DASHBOARD_LVGL_VERSION = c4424b27d63db752aa75f9fdffe30c6467b55ad1
-LVGL_DASHBOARD_EXTRA_DOWNLOADS = \
-	$(call github,lvgl,lvgl,$(LVGL_DASHBOARD_LVGL_VERSION))/lvgl-$(LVGL_DASHBOARD_LVGL_VERSION).tar.gz
-
-define LVGL_DASHBOARD_EXTRACT_LVGL
-	$(RM) -r $(@D)/lvgl
+define LVGL_DASHBOARD_EXTRACT_CMDS
 	mkdir -p $(@D)/lvgl
-	$(TAR) -xzf \
-		$(LVGL_DASHBOARD_DL_DIR)/lvgl-$(LVGL_DASHBOARD_LVGL_VERSION).tar.gz \
-		-C $(@D)/lvgl --strip-components=1
+	$(INFLATE$(suffix $(LVGL_DASHBOARD_SOURCE))) $(LVGL_DASHBOARD_DL_DIR)/$(LVGL_DASHBOARD_SOURCE) | \
+		$(TAR) --strip-components=1 -C $(@D)/lvgl $(TAR_OPTIONS) -
+	cp -a $(LVGL_DASHBOARD_PKGDIR)/src/. $(@D)/
 endef
-LVGL_DASHBOARD_POST_RSYNC_HOOKS += LVGL_DASHBOARD_EXTRACT_LVGL
 
 define LVGL_DASHBOARD_BUILD_CMDS
 	$(TARGET_MAKE_ENV) $(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(@D)

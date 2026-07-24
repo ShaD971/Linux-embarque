@@ -69,8 +69,8 @@ jobs:
           done
 
           grep -q '^BR2_PACKAGE_LVGL_DASHBOARD=y$' "$defconfig"
-          grep -q '^LVGL_DASHBOARD_SITE_METHOD = local$' "$package_dir/lvgl_dashboard.mk"
-          grep -q '^LVGL_DASHBOARD_EXTRA_DOWNLOADS = ' "$package_dir/lvgl_dashboard.mk"
+          grep -q '^LVGL_DASHBOARD_SITE = \$(call github,lvgl,lvgl,' "$package_dir/lvgl_dashboard.mk"
+          grep -q '^LVGL_DASHBOARD_SOURCE = lvgl-' "$package_dir/lvgl_dashboard.mk"
 
       - name: Install Buildroot dependencies
         run: |
