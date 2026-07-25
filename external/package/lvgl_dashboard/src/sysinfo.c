@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 static uint64_t monotonic_ms(void)
 {
@@ -62,11 +63,15 @@ static float sample_cpu_usage(void)
 
 /* ---- RAM ---- */
 
-static float sample_ram_usage(void)
+static void sample_ram(sysinfo_t *out)
 {
+    out->ram_usage_pct = -1.0f;
+    out->ram_used_mb = -1.0f;
+    out->ram_total_mb = -1.0f;
+
     FILE *f = fopen("/proc/meminfo", "r");
     if (f == NULL) {
-        return -1.0f;
+        return;
     }
 
     long total_kb = -1, avail_kb = -1;
@@ -85,10 +90,74 @@ static float sample_ram_usage(void)
     fclose(f);
 
     if (total_kb <= 0 || avail_kb < 0) {
+        return;
+    }
+
+    long used_kb = total_kb - avail_kb;
+    out->ram_usage_pct = 100.0f * (float)used_kb / (float)total_kb;
+    out->ram_used_mb = (float)used_kb / 1024.0f;
+    out->ram_total_mb = (float)total_kb / 1024.0f;
+}
+
+/* ---- Uptime et charge moyenne ---- */
+
+static uint64_t sample_uptime(void)
+{
+    FILE *f = fopen("/proc/uptime", "r");
+    if (f == NULL) {
+        return 0;
+    }
+
+    double up = 0.0;
+    int n = fscanf(f, "%lf", &up);
+    fclose(f);
+
+    if (n != 1 || up < 0.0) {
+        return 0;
+    }
+    return (uint64_t)up;
+}
+
+static float sample_load1(void)
+{
+    FILE *f = fopen("/proc/loadavg", "r");
+    if (f == NULL) {
         return -1.0f;
     }
 
-    return 100.0f * (float)(total_kb - avail_kb) / (float)total_kb;
+    float load = -1.0f;
+    int n = fscanf(f, "%f", &load);
+    fclose(f);
+
+    return (n == 1) ? load : -1.0f;
+}
+
+/* ---- Constantes machine ---- */
+
+const char *sysinfo_hostname(void)
+{
+    static char name[SYSINFO_HOSTNAME_MAX];
+    static bool loaded = false;
+
+    if (!loaded) {
+        if (gethostname(name, sizeof(name)) != 0) {
+            snprintf(name, sizeof(name), "inconnu");
+        }
+        name[sizeof(name) - 1] = '\0';
+        loaded = true;
+    }
+    return name;
+}
+
+int sysinfo_cpu_count(void)
+{
+    static int count = 0;
+
+    if (count == 0) {
+        long n = sysconf(_SC_NPROCESSORS_ONLN);
+        count = (n > 0) ? (int)n : 1;
+    }
+    return count;
 }
 
 /* ---- Temperature SoC ---- */
@@ -257,7 +326,9 @@ static void sample_network(sysinfo_t *out)
 void sysinfo_read(sysinfo_t *out)
 {
     out->cpu_usage_pct = sample_cpu_usage();
-    out->ram_usage_pct = sample_ram_usage();
     out->soc_temp_c = sample_soc_temp();
+    out->uptime_s = sample_uptime();
+    out->load1 = sample_load1();
+    sample_ram(out);
     sample_network(out);
 }
