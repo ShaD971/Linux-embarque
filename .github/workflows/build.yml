@@ -85,6 +85,15 @@ jobs:
           path: dl
           key: buildroot-dl-${{ hashFiles('buildroot.version', 'external/external.desc', 'external/external.mk', 'external/Config.in', 'external/configs/**', 'external/package/**/Config.in', 'external/package/**/*.mk', 'external/package/**/*.hash') }}
 
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildroot-ccache
+          key: buildroot-ccache-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            buildroot-ccache-${{ github.ref_name }}-
+            buildroot-ccache-
+
       - name: Prepare Buildroot
         run: bash ./scripts/setup.sh
 
