@@ -30,7 +30,7 @@ jobs:
       FORCE_UNSAFE_CONFIGURE: 1
       SOURCE_DATE_EPOCH: 1543701000
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -80,13 +80,13 @@ jobs:
           sudo rm -rf /var/lib/apt/lists/*
 
       - name: Cache downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: dl
           key: buildroot-dl-${{ hashFiles('buildroot.version', 'external/external.desc', 'external/external.mk', 'external/Config.in', 'external/configs/**', 'external/package/**/Config.in', 'external/package/**/*.mk', 'external/package/**/*.hash') }}
 
       - name: Cache ccache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.buildroot-ccache
           key: buildroot-ccache-${{ github.ref_name }}-${{ github.sha }}
@@ -156,7 +156,7 @@ jobs:
 
       - name: Upload build diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-logs
           path: |
@@ -176,7 +176,7 @@ jobs:
 
       - name: Upload successful images
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-embarque-images
           path: output/images/
