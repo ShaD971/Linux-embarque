@@ -3,6 +3,7 @@
 /output/
 /dl/
 /logs/
+/build-diagnostics/
 /build/
 !/build/.gitkeep
 

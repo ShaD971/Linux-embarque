@@ -1,0 +1,12 @@
+config BR2_PACKAGE_LVGL_DASHBOARD
+	bool "lvgl_dashboard"
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	select BR2_PACKAGE_LIBDRM
+	help
+	  Dashboard graphique LVGL v9 (rendu DRM/KMS, acceleration NEON)
+	  pour la Raspberry Pi 4. Affichage seul (CPU, RAM, temperature,
+	  reseau, horloge), sans dependance a un ecran tactile.
+
+	  Le code applicatif est versionne avec ce package. Les sources
+	  LVGL sont telechargees separement depuis leur depot public a
+	  une revision figee et verifiee par hash.

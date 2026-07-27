@@ -33,3 +33,13 @@ genimage \
   --inputpath "${BINARIES_DIR}" \
   --outputpath "${BINARIES_DIR}" \
   --config "${board_dir}/genimage.cfg"
+
+# Raspberry Pi Imager accepte les archives .xz et les decompresse a la volee.
+# L'image brute fait ~320 Mo, compressee ~60 Mo : c'est ce qu'on distribue.
+# On garde sdcard.img a cote pour dd / balenaEtcher.
+if command -v xz >/dev/null 2>&1; then
+  xz --keep --force --threads=0 -6 "${BINARIES_DIR}/sdcard.img"
+  echo "Image compressee : ${BINARIES_DIR}/sdcard.img.xz"
+else
+  echo "xz introuvable, sdcard.img.xz non genere" >&2
+fi
