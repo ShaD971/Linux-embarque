@@ -230,6 +230,15 @@ int main(int argc, char **argv)
 #endif
 
     if (disp == NULL) {
+        /* Un arret demande pendant la fenetre de retry n'est pas un echec :
+         * sans cette distinction, `S99lvgl_dashboard stop` lance dans les
+         * premieres secondes du boot renvoyait 1 et affichait FAIL. */
+        if (should_quit) {
+            fprintf(stderr, "Signal recu pendant l'initialisation, arret\n");
+            lv_deinit();
+            return 0;
+        }
+
         fprintf(stderr, "Aucun affichage disponible, abandon\n");
         lv_deinit();
         return 1;
