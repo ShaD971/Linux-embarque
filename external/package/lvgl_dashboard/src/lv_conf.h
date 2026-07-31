@@ -56,7 +56,12 @@
 
 #if LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN
 /** Memory size in bytes (Needs to be at least 2kB (2048)) */
+/* 4 Mo suffisent sur la cible : le framebuffer vient des buffers dumb DRM, pas
+ * de ce tas. Le build de dev le releve (voir Makefile) car lv_snapshot_take y
+ * alloue une image plein ecran, soit 8 Mo en 1920x1080 ARGB8888. */
+#ifndef LV_MEM_SIZE
 #define LV_MEM_SIZE (4U * 1024U * 1024U)
+#endif
 
 /** Address for the memory pool instead of allocating it as a normal array. 0: unused */
 #define LV_MEM_ADR 0x0
@@ -203,7 +208,11 @@
 #define LV_USE_VECTOR_GRAPHIC 0
 
 /** Enable API to take snapshot for object */
+/* Active uniquement par le build de dev, pour produire les captures d'ecran de
+ * validation du layout. Inutile sur la cible. */
+#ifndef LV_USE_SNAPSHOT
 #define LV_USE_SNAPSHOT 0
+#endif
 
 /** ThorVG library for vector graphics support */
 #define LV_USE_THORVG 0
@@ -308,7 +317,16 @@
  *  - LV_DRAW_SW_ASM_RISCV_V: RISC-V Vector
  *  - LV_DRAW_SW_ASM_CUSTOM
  */
+/* NEON n'existe que sur ARM : la cible (Cortex-A72) en profite, mais le build
+ * de developpement x86_64 doit retomber sur le C portable, sinon les intrinseques
+ * ne compilent pas. */
+#ifndef LV_USE_DRAW_SW_ASM
+#if defined(__ARM_NEON) || defined(__aarch64__)
 #define LV_USE_DRAW_SW_ASM LV_DRAW_SW_ASM_NEON
+#else
+#define LV_USE_DRAW_SW_ASM LV_DRAW_SW_ASM_NONE
+#endif
+#endif
 
 #if LV_USE_DRAW_SW_ASM == LV_DRAW_SW_ASM_CUSTOM
 /** Set the custom asm include file */
@@ -1453,7 +1471,11 @@
  *============================================================================*/
 
 /** Driver for /dev/dri/card */
+/* Backend de la cible. Le Makefile le force a 0 pour `make BACKEND=sdl`, afin
+ * que le binaire de dev n'embarque pas le driver DRM (et inversement). */
+#ifndef LV_USE_LINUX_DRM
 #define LV_USE_LINUX_DRM 1
+#endif
 
 #if LV_USE_LINUX_DRM
 /** Legacy behavior, kept for backwards compatibility and slated for removal.
@@ -1703,7 +1725,11 @@
 #endif /*LV_USE_QNX*/
 
 /** Use SDL to open window on PC and handle mouse and keyboard. */
+/* Reserve au build de developpement (`make BACKEND=sdl`) : reste a 0 pour la
+ * cible, qui ne doit dependre que de libdrm. */
+#ifndef LV_USE_SDL
 #define LV_USE_SDL 0
+#endif
 
 #if LV_USE_SDL
 /** SDL include path */

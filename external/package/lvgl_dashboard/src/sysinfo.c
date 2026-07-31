@@ -181,10 +181,35 @@ static float sample_soc_temp(void)
 
 /* ---- Reseau ---- */
 
+/* Les noms d'interface Linux tiennent dans IFNAMSIZ (16, NUL compris). Un nom
+ * plus long ne peut pas designer une interface valide : on le rejette au lieu
+ * de le tronquer, une troncature fabriquerait un chemin /sys inexistant ou,
+ * pire, celui d'une autre interface. */
+static bool copy_ifname(char *dst, size_t dst_size, const char *src)
+{
+    size_t len = strlen(src);
+    if (len == 0 || len >= dst_size) {
+        return false;
+    }
+    memcpy(dst, src, len + 1);
+    return true;
+}
+
+/* Compose /sys/class/net/<ifname>/<suffix>. Renvoie false si le chemin ne tient
+ * pas dans le tampon : mieux vaut renoncer que lire un fichier tronque. */
+static bool iface_path(char *buf, size_t size, const char *ifname,
+                       const char *suffix)
+{
+    int n = snprintf(buf, size, "/sys/class/net/%s/%s", ifname, suffix);
+    return n > 0 && (size_t)n < size;
+}
+
 static bool iface_is_up(const char *ifname)
 {
     char path[64];
-    snprintf(path, sizeof(path), "/sys/class/net/%s/operstate", ifname);
+    if (!iface_path(path, sizeof(path), ifname, "operstate")) {
+        return false;
+    }
 
     FILE *f = fopen(path, "r");
     if (f == NULL) {
@@ -220,13 +245,13 @@ static bool read_iface_bytes(const char *ifname, uint64_t *rx, uint64_t *tx)
 {
     char path[80];
 
-    snprintf(path, sizeof(path), "/sys/class/net/%s/statistics/rx_bytes", ifname);
-    if (!read_u64_file(path, rx)) {
+    if (!iface_path(path, sizeof(path), ifname, "statistics/rx_bytes") ||
+        !read_u64_file(path, rx)) {
         return false;
     }
 
-    snprintf(path, sizeof(path), "/sys/class/net/%s/statistics/tx_bytes", ifname);
-    if (!read_u64_file(path, tx)) {
+    if (!iface_path(path, sizeof(path), ifname, "statistics/tx_bytes") ||
+        !read_u64_file(path, tx)) {
         return false;
     }
 
@@ -254,12 +279,11 @@ static bool select_iface(char *out, size_t out_size, bool *out_up)
         }
 
         if (fallback[0] == '\0') {
-            snprintf(fallback, sizeof(fallback), "%s", ent->d_name);
+            copy_ifname(fallback, sizeof(fallback), ent->d_name);
         }
 
         if (!found_up && iface_is_up(ent->d_name)) {
-            snprintf(up_name, sizeof(up_name), "%s", ent->d_name);
-            found_up = true;
+            found_up = copy_ifname(up_name, sizeof(up_name), ent->d_name);
         }
     }
     closedir(d);
@@ -269,7 +293,9 @@ static bool select_iface(char *out, size_t out_size, bool *out_up)
         return false;
     }
 
-    snprintf(out, out_size, "%s", chosen);
+    if (!copy_ifname(out, out_size, chosen)) {
+        return false;
+    }
     *out_up = found_up;
     return true;
 }
@@ -289,7 +315,7 @@ static void sample_network(sysinfo_t *out)
 
     out->net_available = true;
     out->net_up = up;
-    snprintf(out->net_ifname, sizeof(out->net_ifname), "%s", ifname);
+    copy_ifname(out->net_ifname, sizeof(out->net_ifname), ifname);
 
     static char prev_ifname[SYSINFO_IFNAME_MAX] = {0};
     static uint64_t prev_rx, prev_tx;
@@ -316,7 +342,7 @@ static void sample_network(sysinfo_t *out)
         out->net_tx_kbps = 0.0;
     }
 
-    snprintf(prev_ifname, sizeof(prev_ifname), "%s", ifname);
+    copy_ifname(prev_ifname, sizeof(prev_ifname), ifname);
     prev_rx = rx;
     prev_tx = tx;
     prev_ts_ms = now_ms;
